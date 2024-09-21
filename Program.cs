@@ -6,6 +6,7 @@ using System;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Configuration;
 
 namespace email_to_discord_webhook
 {
@@ -17,6 +18,9 @@ namespace email_to_discord_webhook
                 .WriteTo.File("log.txt")
                 .CreateLogger();
 
+            var configuration = new ConfigurationBuilder()
+                .AddJsonFile("app.settings.json")
+                .Build();
         }
     }
 }
