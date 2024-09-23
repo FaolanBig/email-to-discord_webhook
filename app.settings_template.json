@@ -4,6 +4,15 @@
   "emailUserName": "",
   "emailPW": "",
   "emailRecipient": "",
-  "emailAccepted": [ "", "" ],
-  "urlWebhook": ""
+  "urlWebhook": "",
+  "emailAccepts": [
+    {
+      "emailAddress": "",
+      "subjectShort": ""
+    },
+    {
+      "emailAddress": "",
+      "subjectShort": ""
+    }
+  ]
 }
