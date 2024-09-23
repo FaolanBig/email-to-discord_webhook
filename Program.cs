@@ -15,13 +15,17 @@ namespace email_to_discord_webhook
     {
         static async Task Main(string[] args)
         {
-            Log.Logger = new LoggerConfiguration()
-                .WriteTo.File("log.txt")
-                .CreateLogger();
-
-            var configuration = new ConfigurationBuilder()
-                .AddJsonFile("app.settings.json")
-                .Build();
+            const string jsonPath = "app.settings.json";
+            try
+            {
+                string content = File.ReadAllText(jsonPath);
+                EmailConfig config = JsonConvert.DeserializeObject<EmailConfig>(content);
+            }
+            catch (Exception ex)
+            {
+                ToLog.Err($"some shit went wrong when reading and deserializing app.settings.json - error: {ex.Message}");
+            }
+            
         }
     }
 }
