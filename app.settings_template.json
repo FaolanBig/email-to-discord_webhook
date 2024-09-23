@@ -4,20 +4,25 @@
   "emailUserName": "",
   "emailPW": "",
   "emailRecipient": "",
+  "defaultWebhookURL": "",
   "emailAccepts": [
     {
       "emailAddress": "",
-      "data": {
-        "subjectShort": "",
-        "webhookURL": ""
-      }
+      "data": [
+        {
+          "subjectShort": "",
+          "webhookURL": ""
+        }
+      ]
     },
     {
       "emailAddress": "",
-      "data": {
-        "subjectShort": "",
-        "webhookURL": ""
-      }
+      "data": [
+        {
+          "subjectShort": "",
+          "webhookURL": ""
+        }
+      ]
     }
   ]
 }
