@@ -1,20 +1,23 @@
 {
-  "imapServer": "imap.example.com",
+  "imapServer": "imap.web.de",
   "imapPort": "993",
   "emailUserName": "",
   "emailPW": "",
   "emailRecipient": "",
-  "urlWebhook": "",
   "emailAccepts": [
     {
       "emailAddress": "",
-      "subjectShort": "",
-      "webhookURL": ""
+      "data": {
+        "subjectShort": "",
+        "webhookURL": ""
+      }
     },
     {
       "emailAddress": "",
-      "subjectShort": "",
-      "webhookURL": ""
+      "data": {
+        "subjectShort": "",
+        "webhookURL": ""
+      }
     }
   ]
 }

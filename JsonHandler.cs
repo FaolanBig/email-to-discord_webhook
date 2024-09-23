@@ -19,16 +19,20 @@ namespace email_to_discord_webhook
             EmailConfig config = JsonConvert.DeserializeObject<EmailConfig>(content);
         }
     }
+    public class Data
+    {
+        public string subjectShort { get; set; }
+        public string webhookURL { get; set; }
+    }
     public class EmailAccept
     {
         public string emailAddress { get; set; }
-        public string subjectShort { get; set; }
-        public string webhookURL { get; set; }
+        public Data data { get; set; }
     }
     public class EmailConfig
     {
         public string imapServer { get; set; }
-        public string imapPort { get; set; }
+        public int imapPort { get; set; }
         public string emailUserName { get; set; }
         public string emailPW { get; set; }
         public string emailRecipient { get; set; }
