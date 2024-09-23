@@ -8,11 +8,13 @@
   "emailAccepts": [
     {
       "emailAddress": "",
-      "subjectShort": ""
+      "subjectShort": "",
+      "webhookURL": ""
     },
     {
       "emailAddress": "",
-      "subjectShort": ""
+      "subjectShort": "",
+      "webhookURL": ""
     }
   ]
 }
