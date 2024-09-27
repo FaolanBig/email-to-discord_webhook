@@ -53,7 +53,7 @@ namespace email_to_discord_webhook
     public class EmailAccept
     {
         public string emailAddress { get; set; }
-        public Data data { get; set; }
+        public List<Data> data { get; set; }
     }
     public class EmailConfig
     {
@@ -62,6 +62,7 @@ namespace email_to_discord_webhook
         public string emailUserName { get; set; }
         public string emailPW { get; set; }
         public string emailRecipient { get; set; }
+        public string defaultWebhookURL { get; set; }
 
         public List<EmailAccept> emailAccepts { get; set; }
     }

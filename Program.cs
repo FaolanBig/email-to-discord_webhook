@@ -34,6 +34,9 @@ using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
+using System.IO;
+using MailKit;
+using HtmlAgilityPack;
 
 namespace email_to_discord_webhook
 {
@@ -43,49 +46,71 @@ namespace email_to_discord_webhook
         {
             const string jsonPath = "app.settings.json";
             EmailConfig config = new();
-            try
-            {
-                string content = File.ReadAllText(jsonPath);
-                config = JsonConvert.DeserializeObject<EmailConfig>(content);
-                ToLog.Inf("read contents of app.settings.json");
-            }
-            catch (Exception ex)
-            {
-                ToLog.Err($"some shit went wrong when reading and deserializing app.settings.json - error: {ex.Message}");
-                Environment.Exit(1);
-            }
+
+            string content = File.ReadAllText(jsonPath);
+            config = JsonConvert.DeserializeObject<EmailConfig>(content);
 
             try
             {
                 using var client = new ImapClient();
                 await client.ConnectAsync(config.imapServer, config.imapPort, true);
                 await client.AuthenticateAsync(config.emailUserName, config.emailPW);
-                await client.Inbox.OpenAsync(MailKit.FolderAccess.ReadOnly);
+                await client.Inbox.OpenAsync(MailKit.FolderAccess.ReadWrite);
 
-                foreach (var accepted in config.emailAccepts)
+                foreach (var result in await client.Inbox.SearchAsync(SearchQuery.NotSeen))
                 {
-                    var query = SearchQuery.FromContains(accepted.emailAddress).And(SearchQuery.ToContains(config.emailRecipient));
-                    var results = await client.Inbox.SearchAsync(query);
+                    var message = await client.Inbox.GetMessageAsync(result);
+                    bool found = false;
 
-                    foreach (var result in results)
+                    foreach (var accepted in config.emailAccepts)
                     {
-                        var message = await client.Inbox.GetMessageAsync(result);
-                        if (string.Equals(message.Subject, accepted.data.subjectShort, StringComparison.OrdinalIgnoreCase))
+                        if (string.Equals(message.From.Mailboxes.First().Address, accepted.emailAddress, StringComparison.OrdinalIgnoreCase))
                         {
-                            await SendToDiscord(accepted.data.subjectShort, message.TextBody, accepted.data.webhookURL);
-                            ToLog.Inf($"send message successfully");
-                            ToLog.Inf($"message data: from: {accepted.emailAddress} to: {accepted.data.webhookURL}");
+                            foreach (var item in accepted.data)
+                            {
+                                if (string.Equals(message.Subject, item.subjectShort, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string bodycontentHold;
+
+                                    if (!string.IsNullOrEmpty(message.TextBody))
+                                    {
+                                        bodycontentHold = message.TextBody;
+                                    }
+                                    else if (!string.IsNullOrEmpty(message.HtmlBody))
+                                    {
+                                        bodycontentHold = HTML_toText(message.HtmlBody);
+                                    }
+                                    else
+                                    {
+                                        bodycontentHold = "ERROR: no body content found - please report to admin or mod";
+                                    }
+
+                                    await SendToDiscord(item.subjectShort, message.TextBody, item.webhookURL);
+                                    found = true;
+                                    ToLog.Inf($"Sent message successfully: from {accepted.emailAddress} to {item.webhookURL}");
+                                }
+                            }
                         }
                     }
+
+                    if (!found)
+                    {
+                        await SendToDiscord(message.Subject, message.TextBody, config.defaultWebhookURL, "Unknown sender");
+                        ToLog.Inf($"Sent message from unknown sender: {message.From} to {config.defaultWebhookURL}");
+                    }
+
+                    await client.Inbox.AddFlagsAsync(result, MessageFlags.Seen, true);
                 }
             }
             catch (Exception ex)
             {
-                ToLog.Err($"wrong shit ad main - error: {ex.Message}");
+                ToLog.Err($"wrong shit at main - error: {ex.Message}");
             }
         }
-        internal static async Task SendToDiscord(string subject, string content, string webhookURL)
+        internal static async Task SendToDiscord(string subject, string content, string webhookURL, string extra = "")
         {
+            if (!string.IsNullOrEmpty(extra)) { extra = extra + "\n" + subject; }
+            else { extra = subject; }
             try
             {
                 using var client = new HttpClient();
@@ -95,7 +120,7 @@ namespace email_to_discord_webhook
                     {
                     new
                     {
-                        title = subject,
+                        title = extra,
                         description = content,
                         color = 0xFF007F,
                         footer = new
@@ -123,6 +148,13 @@ namespace email_to_discord_webhook
             {
                 ToLog.Err($"accident at SendToDiscord - error: {ex.Message}");
             }
+        }
+        internal static string HTML_toText(string html)
+        {
+            if (string.IsNullOrEmpty(html)) { return string.Empty; }
+            var toConvert = new HtmlDocument();
+            toConvert.LoadHtml(html);
+            return toConvert.DocumentNode.InnerText;
         }
     }
 }
