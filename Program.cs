@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using System.IO;
 using MailKit;
 using HtmlAgilityPack;
+using MimeKit.Tnef;
+using System.Reflection;
 
 namespace email_to_discord_webhook
 {
@@ -60,7 +62,9 @@ namespace email_to_discord_webhook
                                         bodycontentHold = "ERROR: no body content found - please report to admin or mod";
                                     }
 
-                                    await SendToDiscord(item.subjectShort, message.TextBody, item.webhookURL);
+                                    string attachmentInfo = ProcessAttachments(message, item.subjectShort);
+                                    string fullContent = $"{bodycontentHold}\n#####\n{attachmentInfo}";
+                                    await SendToDiscord(item.subjectShort, fullContent, item.webhookURL);
                                     found = true;
                                     ToLog.Inf($"Sent message successfully: from {accepted.emailAddress} to {item.webhookURL}");
                                 }
@@ -131,5 +135,38 @@ namespace email_to_discord_webhook
             toConvert.LoadHtml(html);
             return toConvert.DocumentNode.InnerText;
         }
+        internal static string ProcessAttachments(MimeMessage message, string subject)
+        {
+            var attachmentsInfo = new StringBuilder();
+
+            foreach (var attachment in message.Attachments)
+            {
+                if (attachment is MimePart mimePart)
+                {
+                    var fileName = mimePart.FileName;
+                    attachmentsInfo.AppendLine($"Attachment on hold: {fileName}");
+                    string path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, subject);
+                    if (!Directory.Exists(path))
+                    {
+                        Directory.CreateDirectory(path);
+                    }
+                    var filePath = Path.Combine(path, fileName);
+                    using (var stream = File.Create(filePath))
+                    {
+                        mimePart.Content.DecodeTo(stream);
+                    }
+
+                    /*using (var memoryStream = new MemoryStream())
+                    {
+                        mimePart.Content.DecodeTo(memoryStream);
+                        string base64Content = Convert.ToBase64String(memoryStream.ToArray());
+                        attachmentsInfo.AppendLine($"Base64 Content: {base64Content}");
+                    }*/
+                }
+            }
+
+            return attachmentsInfo.ToString();
+        }
+
     }
 }
