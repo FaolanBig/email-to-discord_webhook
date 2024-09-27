@@ -10,6 +10,7 @@ using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.IO;
 using MailKit;
+using HtmlAgilityPack;
 
 namespace email_to_discord_webhook
 {
@@ -30,28 +31,49 @@ namespace email_to_discord_webhook
                 await client.AuthenticateAsync(config.emailUserName, config.emailPW);
                 await client.Inbox.OpenAsync(MailKit.FolderAccess.ReadWrite);
 
-                foreach (var accepted in config.emailAccepts)
+                foreach (var result in await client.Inbox.SearchAsync(SearchQuery.NotSeen))
                 {
-                    var query = SearchQuery.FromContains(accepted.emailAddress).And(SearchQuery.ToContains(config.emailRecipient));
-                    var results = await client.Inbox.SearchAsync(query);
+                    var message = await client.Inbox.GetMessageAsync(result);
+                    bool found = false;
 
-                    foreach (var result in results)
+                    foreach (var accepted in config.emailAccepts)
                     {
-                        var message = await client.Inbox.GetMessageAsync(result);
-                        bool check = false;
-                        foreach (var item in accepted.data)
+                        if (string.Equals(message.From.Mailboxes.First().Address, accepted.emailAddress, StringComparison.OrdinalIgnoreCase))
                         {
-                            if (string.Equals(message.Subject, item.subjectShort, StringComparison.OrdinalIgnoreCase))
+                            foreach (var item in accepted.data)
                             {
-                                await SendToDiscord(item.subjectShort, message.TextBody, item.webhookURL);
-                                check = true;
-                                ToLog.Inf($"send message successfully");
-                                ToLog.Inf($"message data: from: {accepted.emailAddress} to: {item.webhookURL}");
+                                if (string.Equals(message.Subject, item.subjectShort, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string bodycontentHold;
+
+                                    if (!string.IsNullOrEmpty(message.TextBody))
+                                    {
+                                        bodycontentHold = message.TextBody;
+                                    }
+                                    else if (!string.IsNullOrEmpty(message.HtmlBody))
+                                    {
+                                        bodycontentHold = HTML_toText(message.HtmlBody);
+                                    }
+                                    else
+                                    {
+                                        bodycontentHold = "ERROR: no body content found - please report to admin or mod";
+                                    }
+
+                                    await SendToDiscord(item.subjectShort, message.TextBody, item.webhookURL);
+                                    found = true;
+                                    ToLog.Inf($"Sent message successfully: from {accepted.emailAddress} to {item.webhookURL}");
+                                }
                             }
                         }
-                        if (!check) { await SendToDiscord(message.Subject, message.TextBody, config.defaultWebhookURL, "unallocated"); }
-                        await client.Inbox.AddFlagsAsync(result, MessageFlags.Seen, true);
                     }
+
+                    if (!found)
+                    {
+                        await SendToDiscord(message.Subject, message.TextBody, config.defaultWebhookURL, "Unknown sender");
+                        ToLog.Inf($"Sent message from unknown sender: {message.From} to {config.defaultWebhookURL}");
+                    }
+
+                    await client.Inbox.AddFlagsAsync(result, MessageFlags.Seen, true);
                 }
             }
             catch (Exception ex)
@@ -100,6 +122,13 @@ namespace email_to_discord_webhook
             {
                 ToLog.Err($"accident at SendToDiscord - error: {ex.Message}");
             }
+        }
+        internal static string HTML_toText(string html)
+        {
+            if (string.IsNullOrEmpty(html)) { return string.Empty; }
+            var toConvert = new HtmlDocument();
+            toConvert.LoadHtml(html);
+            return toConvert.DocumentNode.InnerText;
         }
     }
 }
