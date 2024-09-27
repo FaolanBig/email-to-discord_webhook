@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Newtonsoft.Json;
 using System.IO;
+using MailKit;
 
 namespace email_to_discord_webhook
 {
@@ -27,7 +28,7 @@ namespace email_to_discord_webhook
                 using var client = new ImapClient();
                 await client.ConnectAsync(config.imapServer, config.imapPort, true);
                 await client.AuthenticateAsync(config.emailUserName, config.emailPW);
-                await client.Inbox.OpenAsync(MailKit.FolderAccess.ReadOnly);
+                await client.Inbox.OpenAsync(MailKit.FolderAccess.ReadWrite);
 
                 foreach (var accepted in config.emailAccepts)
                 {
@@ -49,6 +50,7 @@ namespace email_to_discord_webhook
                             }
                         }
                         if (!check) { await SendToDiscord(message.Subject, message.TextBody, config.defaultWebhookURL, "unallocated"); }
+                        await client.Inbox.AddFlagsAsync(result, MessageFlags.Seen, true);
                     }
                 }
             }
