@@ -20,6 +20,7 @@ namespace email_to_discord_webhook
     {
         internal static async Task Main(string[] args)
         {
+            ToLog.Inf("etdWebhook started");
             const string jsonPath = "app.settings.json";
             EmailConfig config = new();
 
