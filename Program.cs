@@ -56,6 +56,7 @@ namespace email_to_discord_webhook
                                     }
                                     else
                                     {
+                                        ToLog.Err("no body content found");
                                         bodycontentHold = "ERROR: no body content found - please report to admin or mod";
                                     }
 
