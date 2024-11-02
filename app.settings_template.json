@@ -1,5 +1,5 @@
 {
-  "imapServer": "imap.web.de",
+  "imapServer": "imap.example.com",
   "imapPort": "993",
   "emailUserName": "",
   "emailPW": "",
